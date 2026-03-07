@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+:root {
+  --color-jungle-green: #06402B;
+  --color-gold: #FFD700;
+  --color-sand: #F4E8D1;
+  --color-dark-teal: #134E4A;
+}
+
+body {
+  background-color: var(--color-sand);
+  color: var(--color-jungle-green);
+  font-family: 'Inter', sans-serif;
+}
+
+h1, h2, h3, h4, .pixel-font {
+  font-family: 'Press Start 2P', monospace;
+}
+
+.map-line {
+  background-size: 10px 10px;
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--color-gold) 0,
+    var(--color-gold) 2px,
+    transparent 0,
+    transparent 50%
+  );
+}

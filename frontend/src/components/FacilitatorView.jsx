@@ -3,6 +3,7 @@ import { useSocket } from '../SocketContext';
 import { Play, Square, Download, ChevronRight, BarChart2, RefreshCw, Layers, Send, ArrowLeft, QrCode, Copy, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { SCENARIOS } from '../scenarios';
+import AnalyticsDashboard from './AnalyticsDashboard';
 
 export default function FacilitatorView() {
     const { socket, session, activeSessionId, activeSessionCode, setActiveSessionId, setActiveSessionCode, exportSession, getSessionQR } = useSocket();
@@ -11,6 +12,7 @@ export default function FacilitatorView() {
     const [qrData, setQrData] = useState(null);
     const [showQR, setShowQR] = useState(false);
     const [codeCopied, setCodeCopied] = useState(false);
+    const [view, setView] = useState('phases');
 
     // Load QR code on mount
     useEffect(() => {
@@ -127,10 +129,21 @@ export default function FacilitatorView() {
                     </div>
 
                     <div className="space-y-3 mb-auto">
-                        <PhaseButton active={session.phase === 1} label="Phase 1: Entry" onClick={() => handlePhaseChange(1)} />
-                        <PhaseButton active={session.phase === 2} label="Phase 2: The Green Line" onClick={() => handlePhaseChange(2)} />
-                        <PhaseButton active={session.phase === 3} label="Phase 3: The Policy" onClick={() => handlePhaseChange(3)} />
-                        <PhaseButton active={session.phase === 4} label="Phase 4: What's Next" onClick={() => handlePhaseChange(4)} />
+                        <PhaseButton active={session.phase === 1 && view === 'phases'} label="Phase 1: Entry" onClick={() => { setView('phases'); handlePhaseChange(1); }} />
+                        <PhaseButton active={session.phase === 2 && view === 'phases'} label="Phase 2: The Green Line" onClick={() => { setView('phases'); handlePhaseChange(2); }} />
+                        <PhaseButton active={session.phase === 3 && view === 'phases'} label="Phase 3: The Policy" onClick={() => { setView('phases'); handlePhaseChange(3); }} />
+                        <PhaseButton active={session.phase === 4 && view === 'phases'} label="Phase 4: What's Next" onClick={() => { setView('phases'); handlePhaseChange(4); }} />
+
+                        <button
+                            onClick={() => setView('analytics')}
+                            className={`w-full text-left px-4 py-3 rounded-lg font-bold flex justify-between items-center transition-all ${view === 'analytics'
+                                ? 'bg-[#22c55e] text-white shadow-[0_4px_0_#16a34a] transform scale-105 z-10'
+                                : 'bg-[#06402B]/50 text-white hover:bg-[#06402B] hover:pl-6'
+                                }`}
+                        >
+                            <span className="pixel-font text-xs tracking-wider">📊 ANALYTICS</span>
+                            {view === 'analytics' && <ChevronRight className="w-5 h-5" />}
+                        </button>
                     </div>
 
                     <div className="mt-8 space-y-3 pt-6 border-t border-[#06402B]/50">
@@ -144,14 +157,24 @@ export default function FacilitatorView() {
                 </div>
 
                 {/* Dashboard Main View */}
-                <div className="lg:col-span-9 bg-[#F4E8D1] rounded-2xl p-8 shadow-xl text-[#06402B] border-4 border-[#06402B] h-[calc(100vh-80px)] overflow-y-auto mix-blend-normal relative">
-                    <div className="map-line absolute inset-0 opacity-10 pointer-events-none rounded-xl"></div>
+                <div className={`lg:col-span-9 rounded-2xl p-8 shadow-xl border-4 h-[calc(100vh-80px)] overflow-y-auto mix-blend-normal relative ${
+                    view === 'analytics'
+                        ? 'bg-stone-900 text-stone-100 border-stone-700'
+                        : 'bg-[#F4E8D1] text-[#06402B] border-[#06402B]'
+                }`}>
+                    <div className={`map-line absolute inset-0 ${view === 'analytics' ? '' : 'opacity-10'} pointer-events-none rounded-xl`}></div>
 
                     <div className="relative z-10">
-                        {session.phase === 1 && <Phase1Dashboard session={session} />}
-                        {session.phase === 2 && <Phase2Dashboard session={session} />}
-                        {session.phase === 3 && <Phase3Dashboard session={session} socket={socket} activeSessionId={activeSessionId} activeScenario={activeScenario} />}
-                        {session.phase === 4 && <Phase4Dashboard session={session} />}
+                        {view === 'phases' ? (
+                            <>
+                                {session.phase === 1 && <Phase1Dashboard session={session} />}
+                                {session.phase === 2 && <Phase2Dashboard session={session} />}
+                                {session.phase === 3 && <Phase3Dashboard session={session} socket={socket} activeSessionId={activeSessionId} activeScenario={activeScenario} />}
+                                {session.phase === 4 && <Phase4Dashboard session={session} />}
+                            </>
+                        ) : (
+                            <AnalyticsDashboard session={session} />
+                        )}
                     </div>
                 </div>
             </div>

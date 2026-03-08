@@ -1,12 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSocket } from '../SocketContext';
 import { Compass, CheckCircle2, ChevronRight, Send, AlertTriangle, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { SCENARIOS } from '../scenarios';
 
 export default function ParticipantView() {
-    const { socket, session } = useSocket();
+    const { socket, session, participantJoinSession } = useSocket();
+    const [sessionCode, setSessionCode] = useState('');
     const [groupName, setGroupName] = useState('');
     const [joined, setJoined] = useState(false);
+    const [joinError, setJoinError] = useState('');
 
     const [responses, setResponses] = useState({
         like: '',
@@ -20,20 +23,32 @@ export default function ParticipantView() {
     });
 
     useEffect(() => {
-        // Rehydrate groupName from local storage if available
+        // Rehydrate from local storage if available
+        const savedCode = localStorage.getItem('explorerSessionCode');
         const savedName = localStorage.getItem('explorerGroupName');
-        if (savedName) {
+        if (savedCode && savedName) {
+            setSessionCode(savedCode);
             setGroupName(savedName);
             setJoined(true);
-            socket.emit('joinGroup', savedName);
+            participantJoinSession(savedCode, savedName);
         }
+    }, []);
+
+    useEffect(() => {
+        socket.on('error', (data) => {
+            setJoinError(data.message);
+            setJoined(false);
+        });
+        return () => socket.off('error');
     }, [socket]);
 
     const handleJoin = (e) => {
         e.preventDefault();
-        if (groupName.trim()) {
+        setJoinError('');
+        if (sessionCode.trim() && groupName.trim()) {
+            localStorage.setItem('explorerSessionCode', sessionCode.trim().toUpperCase());
             localStorage.setItem('explorerGroupName', groupName.trim());
-            socket.emit('joinGroup', groupName.trim());
+            participantJoinSession(sessionCode.trim().toUpperCase(), groupName.trim());
             setJoined(true);
         }
     };
@@ -41,7 +56,6 @@ export default function ParticipantView() {
     const handlePromptSubmit = (promptId) => {
         if (responses[promptId].trim()) {
             socket.emit('submitResponse', {
-                groupName,
                 promptId,
                 text: responses[promptId]
             });
@@ -58,12 +72,12 @@ export default function ParticipantView() {
     const [openEndedResponse, setOpenEndedResponse] = useState('');
 
     const handleVote = (answer) => {
-        socket.emit('submitVote', { groupName, answer });
+        socket.emit('submitVote', { answer });
     };
 
     const handleOpenEndedSubmit = () => {
         if (openEndedResponse.trim()) {
-            socket.emit('submitVote', { groupName, answer: openEndedResponse.trim() });
+            socket.emit('submitVote', { answer: openEndedResponse.trim() });
         }
     };
 
@@ -74,11 +88,17 @@ export default function ParticipantView() {
 
     const handleSubmitStep = () => {
         if (nextStep.trim()) {
-            socket.emit('submitNextStep', { groupName, text: nextStep, tags: [nextStepTag] });
+            socket.emit('submitNextStep', { text: nextStep, tags: [nextStepTag] });
             setNextStep('');
             setSubmittedSteps(prev => prev + 1);
         }
     };
+
+    // Resolve scenario from ID
+    const activeScenario = useMemo(() => {
+        if (!session.activeScenario) return null;
+        return SCENARIOS.find(s => s.id === session.activeScenario) || null;
+    }, [session.activeScenario]);
 
     if (!joined) {
         return (
@@ -93,16 +113,39 @@ export default function ParticipantView() {
                         <Compass className="w-16 h-16 text-[#FFD700] drop-shadow-md" />
                     </div>
                     <h1 className="text-3xl text-center pixel-font mb-4 text-[#FFD700]">Enter the Temple</h1>
-                    <p className="text-center mb-8 font-medium">Join your fellow explorers. Form a group of 3-4 and enter your group name below.</p>
+                    <p className="text-center mb-8 font-medium">Enter the session code from your facilitator, then your group name.</p>
+
+                    {joinError && (
+                        <div className="bg-red-900/40 border border-red-500 text-red-200 px-4 py-3 rounded-lg mb-4 flex items-center gap-2">
+                            <AlertTriangle className="w-5 h-5 shrink-0" />
+                            <span className="text-sm font-medium">{joinError}</span>
+                        </div>
+                    )}
+
                     <form onSubmit={handleJoin} className="space-y-4">
-                        <input
-                            type="text"
-                            placeholder="e.g. The Pathfinders"
-                            className="w-full px-4 py-3 bg-[#F4E8D1] text-[#06402B] rounded shadow-inner font-semibold text-lg outline-none focus:ring-4 focus:ring-[#FFD700]"
-                            value={groupName}
-                            onChange={(e) => setGroupName(e.target.value)}
-                            required
-                        />
+                        <div>
+                            <label className="block text-xs uppercase font-bold mb-2 text-[#FFD700] opacity-80">Session Code</label>
+                            <input
+                                type="text"
+                                placeholder="e.g. G29TNO"
+                                className="w-full px-4 py-3 bg-[#F4E8D1] text-[#06402B] rounded shadow-inner font-semibold text-xl outline-none focus:ring-4 focus:ring-[#FFD700] text-center tracking-[0.3em] uppercase"
+                                value={sessionCode}
+                                onChange={(e) => setSessionCode(e.target.value.toUpperCase())}
+                                maxLength={6}
+                                required
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs uppercase font-bold mb-2 text-[#FFD700] opacity-80">Group Name</label>
+                            <input
+                                type="text"
+                                placeholder="e.g. The Pathfinders"
+                                className="w-full px-4 py-3 bg-[#F4E8D1] text-[#06402B] rounded shadow-inner font-semibold text-lg outline-none focus:ring-4 focus:ring-[#FFD700]"
+                                value={groupName}
+                                onChange={(e) => setGroupName(e.target.value)}
+                                required
+                            />
+                        </div>
                         <button className="w-full bg-[#FFD700] text-[#06402B] font-bold py-4 rounded-lg shadow-[0_4px_0_#B8860B] active:shadow-none active:translate-y-1 transition-all pixel-font text-sm">
                             START EXPEDITION
                         </button>
@@ -201,7 +244,7 @@ export default function ParticipantView() {
                                 <p className="text-lg font-semibold text-[#134E4A]">Consult the HR Guidance Document.</p>
                             </div>
 
-                            {!session.activeScenario ? (
+                            {!activeScenario ? (
                                 <div className="bg-white/50 border-2 border-dashed border-[#134E4A] p-12 rounded-2xl flex flex-col items-center text-center">
                                     <BookOpen className="w-12 h-12 text-[#134E4A] opacity-50 mb-4" />
                                     <h3 className="text-xl font-bold text-[#134E4A] mb-2">Awaiting the Scroll</h3>
@@ -211,11 +254,11 @@ export default function ParticipantView() {
                                 <div className="bg-white p-6 rounded-xl shadow-lg border-2 border-[#134E4A]">
                                     <div className="flex items-center space-x-3 mb-4 text-[#134E4A]">
                                         <BookOpen className="w-6 h-6" />
-                                        <h3 className="text-xl font-bold pixel-font">{session.activeScenario.title.split('—')[0].trim()}</h3>
+                                        <h3 className="text-xl font-bold pixel-font">{activeScenario.title.split('—')[0].trim()}</h3>
                                     </div>
-                                    <h4 className="font-bold text-gray-800 mb-2">{session.activeScenario.title.split('—')[1]?.trim()}</h4>
+                                    <h4 className="font-bold text-gray-800 mb-2">{activeScenario.title.split('—')[1]?.trim()}</h4>
                                     <p className="text-lg text-gray-700 leading-relaxed bg-gray-50 p-4 border border-gray-200 rounded">
-                                        {session.activeScenario.text}
+                                        {activeScenario.text}
                                     </p>
 
                                     <div className="mt-8">
@@ -225,7 +268,7 @@ export default function ParticipantView() {
 
                                         {session.responseFormat === 'multiple_choice' ? (
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                {session.activeScenario.options && session.activeScenario.options.map((opt, index) => {
+                                                {activeScenario.options && activeScenario.options.map((opt, index) => {
                                                     const colors = ['bg-[#06402B]', 'bg-[#134E4A]', 'bg-gray-600', 'bg-gray-700'];
                                                     return (
                                                         <VoteButton

@@ -3,10 +3,12 @@ import { useSocket } from '../SocketContext';
 import { Play, Square, Download, ChevronRight, BarChart2, RefreshCw, Layers, Send, ArrowLeft, QrCode, Copy, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { SCENARIOS } from '../scenarios';
+import { useSoundEffects } from '../hooks/useSoundEffects';
 import AnalyticsDashboard from './AnalyticsDashboard';
 
 export default function FacilitatorView() {
     const { socket, session, activeSessionId, activeSessionCode, setActiveSessionId, setActiveSessionCode, exportSession, getSessionQR } = useSocket();
+    const { playVine, playDeath } = useSoundEffects();
     const [timeLeft, setTimeLeft] = useState(15 * 60);
     const [timerRunning, setTimerRunning] = useState(false);
     const [qrData, setQrData] = useState(null);
@@ -38,6 +40,7 @@ export default function FacilitatorView() {
 
     const handlePhaseChange = (newPhase) => {
         socket.emit('setPhase', { sessionId: activeSessionId, phase: newPhase });
+        playVine();
 
         if (newPhase === 1) setTimeLeft(15 * 60);
         if (newPhase === 2) setTimeLeft(5 * 60);
@@ -49,6 +52,7 @@ export default function FacilitatorView() {
 
     const handleReset = () => {
         if (confirm("Reset the entire session? All data will be lost.")) {
+            playDeath();
             socket.emit('resetSession', { sessionId: activeSessionId });
             setTimeLeft(15 * 60);
             setTimerRunning(false);

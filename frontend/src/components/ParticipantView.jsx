@@ -3,9 +3,11 @@ import { useSocket } from '../SocketContext';
 import { Compass, CheckCircle2, ChevronRight, Send, AlertTriangle, BookOpen } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SCENARIOS } from '../scenarios';
+import { useSoundEffects } from '../hooks/useSoundEffects';
 
 export default function ParticipantView() {
     const { socket, session, participantJoinSession } = useSocket();
+    const { playJoin, playResponse, playVine, playDamage } = useSoundEffects();
     const [sessionCode, setSessionCode] = useState('');
     const [groupName, setGroupName] = useState('');
     const [joined, setJoined] = useState(false);
@@ -50,6 +52,7 @@ export default function ParticipantView() {
             localStorage.setItem('explorerGroupName', groupName.trim());
             participantJoinSession(sessionCode.trim().toUpperCase(), groupName.trim());
             setJoined(true);
+            playJoin();
         }
     };
 
@@ -60,6 +63,7 @@ export default function ParticipantView() {
                 text: responses[promptId]
             });
             setSubmittedPrompts(prev => ({ ...prev, [promptId]: true }));
+            playResponse();
         }
     };
 

@@ -7,7 +7,7 @@ import { useSoundEffects } from '../hooks/useSoundEffects';
 
 export default function ParticipantView() {
     const { socket, session, participantJoinSession } = useSocket();
-    const { playJoin, playResponse, playVine, playDamage } = useSoundEffects();
+    const { playJoin, playResponse, playVine, playDamage, playTreasure } = useSoundEffects();
     const [sessionCode, setSessionCode] = useState('');
     const [groupName, setGroupName] = useState('');
     const [joined, setJoined] = useState(false);
@@ -70,6 +70,7 @@ export default function ParticipantView() {
     // Tagging
     const handleTag = (id, tag) => {
         socket.emit('tagResponse', { id, tags: [tag] });
+        playResponse();
     };
 
     // Phase 3 Scenario Response
@@ -77,11 +78,13 @@ export default function ParticipantView() {
 
     const handleVote = (answer) => {
         socket.emit('submitVote', { answer });
+        playResponse();
     };
 
     const handleOpenEndedSubmit = () => {
         if (openEndedResponse.trim()) {
             socket.emit('submitVote', { answer: openEndedResponse.trim() });
+            playResponse();
         }
     };
 
@@ -95,6 +98,7 @@ export default function ParticipantView() {
             socket.emit('submitNextStep', { text: nextStep, tags: [nextStepTag] });
             setNextStep('');
             setSubmittedSteps(prev => prev + 1);
+            playTreasure();
         }
     };
 

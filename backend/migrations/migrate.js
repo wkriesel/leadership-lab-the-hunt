@@ -7,12 +7,16 @@ async function runMigrations() {
     try {
         console.log('Running migrations...');
 
-        // Read the migration file
-        const migrationPath = path.join(__dirname, '001_create_tables.sql');
-        const migrationSQL = fs.readFileSync(migrationPath, 'utf8');
+        // Run all migration files in order
+        const migrationFiles = fs.readdirSync(__dirname)
+            .filter(f => f.endsWith('.sql'))
+            .sort();
 
-        // Execute the migration
-        await pool.query(migrationSQL);
+        for (const file of migrationFiles) {
+            console.log(`  Running ${file}...`);
+            const sql = fs.readFileSync(path.join(__dirname, file), 'utf8');
+            await pool.query(sql);
+        }
 
         console.log('✅ Migrations completed successfully!');
 

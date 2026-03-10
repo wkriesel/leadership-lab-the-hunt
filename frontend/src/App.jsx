@@ -1,18 +1,21 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { SocketProvider, useSocket } from './SocketContext';
 import ParticipantView from './components/ParticipantView';
 import FacilitatorView from './components/FacilitatorView';
 import LoginPage from './pages/LoginPage';
 import SessionDashboard from './pages/SessionDashboard';
+import ExpeditionOverview from './components/ExpeditionOverview';
 
 function AppContent() {
   const { token, activeSessionId } = useSocket();
+  const [showOverview, setShowOverview] = useState(false);
   const isFacilitator = window.location.pathname.startsWith('/facilitator');
 
   if (isFacilitator) {
-    // Facilitator flow: Login → Dashboard → Session
+    // Facilitator flow: Login → Dashboard → Overview/Session
     if (!token) return <LoginPage />;
-    if (!activeSessionId) return <SessionDashboard />;
+    if (showOverview && !activeSessionId) return <ExpeditionOverview onBack={() => setShowOverview(false)} />;
+    if (!activeSessionId) return <SessionDashboard onShowOverview={() => setShowOverview(true)} />;
     return <FacilitatorView />;
   }
 

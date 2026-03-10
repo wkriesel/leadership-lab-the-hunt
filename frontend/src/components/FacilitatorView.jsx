@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSocket } from '../SocketContext';
-import { Play, Square, Download, ChevronRight, BarChart2, RefreshCw, Layers, Send, ArrowLeft, QrCode, Copy, CheckCircle2 } from 'lucide-react';
+import { Play, Square, Download, ChevronRight, BarChart2, RefreshCw, Layers, Send, ArrowLeft, QrCode, Copy, CheckCircle2, Power } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { SCENARIOS } from '../scenarios';
 import { useSoundEffects } from '../hooks/useSoundEffects';
@@ -56,6 +56,14 @@ export default function FacilitatorView() {
             socket.emit('resetSession', { sessionId: activeSessionId });
             setTimeLeft(15 * 60);
             setTimerRunning(false);
+        }
+    };
+
+    const handleEndSession = () => {
+        if (confirm("End this session? All participants will be disconnected and returned to the join screen.")) {
+            socket.emit('endSession', { sessionId: activeSessionId });
+            setActiveSessionId(null);
+            setActiveSessionCode(null);
         }
     };
 
@@ -153,6 +161,9 @@ export default function FacilitatorView() {
                     <div className="mt-8 space-y-3 pt-6 border-t border-[#06402B]/50">
                         <button onClick={handleExport} className="w-full bg-[#FFD700] text-[#06402B] py-3 rounded-lg font-bold shadow-[0_4px_0_#B8860B] hover:-translate-y-1 hover:shadow-[0_6px_0_#B8860B] active:translate-y-1 active:shadow-none transition-all flex items-center justify-center gap-2">
                             <Download className="w-5 h-5" /> EXPORT REPORT
+                        </button>
+                        <button onClick={handleEndSession} className="w-full bg-orange-700 text-white py-3 rounded-lg font-bold shadow-md hover:bg-orange-600 transition-colors flex items-center justify-center gap-2">
+                            <Power className="w-5 h-5" /> END SESSION
                         </button>
                         <button onClick={handleReset} className="w-full bg-red-800 text-white py-3 rounded-lg font-bold shadow-md hover:bg-red-700 transition-colors flex items-center justify-center gap-2">
                             <RefreshCw className="w-5 h-5" /> RESET EXPEDITION

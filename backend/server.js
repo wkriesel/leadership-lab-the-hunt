@@ -364,6 +364,31 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Facilitator ends session - disconnects all participants
+    socket.on('endSession', async (data) => {
+        try {
+            const { sessionId } = data;
+            if (!sessionConnections[sessionId]) return;
+
+            // Notify all participants to clear their state
+            sessionConnections[sessionId].forEach(s => {
+                s.emit('sessionEnded', { message: 'Session has been ended by the facilitator.' });
+            });
+
+            // Remove all connections for this session
+            sessionConnections[sessionId].forEach(s => {
+                s.leave(`session-${sessionId}`);
+                s.sessionId = null;
+                s.groupId = null;
+                s.groupName = null;
+            });
+            delete sessionConnections[sessionId];
+        } catch (error) {
+            console.error('End session error:', error);
+            socket.emit('error', { message: 'Failed to end session' });
+        }
+    });
+
     socket.on('disconnect', () => {
         console.log('Client disconnected:', socket.id);
 

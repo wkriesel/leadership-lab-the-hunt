@@ -81,27 +81,41 @@ export const SocketProvider = ({ children }) => {
     }, []);
 
     // Session API helpers
-    const createSession = useCallback(async (title) => {
+    const createSession = useCallback(async (title, isTest = false) => {
         const res = await fetch(`${API_URL}/api/sessions`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ title })
+            body: JSON.stringify({ title, isTest })
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed to create session');
         return data.session;
     }, [token]);
 
-    const listSessions = useCallback(async () => {
-        const res = await fetch(`${API_URL}/api/sessions`, {
+    const listSessions = useCallback(async (includeTest = true) => {
+        const res = await fetch(`${API_URL}/api/sessions?includeTest=${includeTest}`, {
             headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed to list sessions');
         return data.sessions;
+    }, [token]);
+
+    const aggregateSessions = useCallback(async (sessionIds) => {
+        const res = await fetch(`${API_URL}/api/sessions/aggregate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ sessionIds })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to aggregate sessions');
+        return data.aggregate;
     }, [token]);
 
     const getSessionQR = useCallback(async (sessionId) => {
@@ -142,7 +156,7 @@ export const SocketProvider = ({ children }) => {
             // Auth
             token, user, login, register, logout,
             // Session management
-            createSession, listSessions, getSessionQR, exportSession,
+            createSession, listSessions, aggregateSessions, getSessionQR, exportSession,
             // Active session
             activeSessionId, setActiveSessionId,
             activeSessionCode, setActiveSessionCode,

@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSocket } from '../SocketContext';
-import { Compass, CheckCircle2, ChevronRight, Send, AlertTriangle, BookOpen } from 'lucide-react';
+import { Compass, CheckCircle2, ChevronRight, Send, AlertTriangle, BookOpen, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SCENARIOS } from '../scenarios';
 import { useSoundEffects } from '../hooks/useSoundEffects';
+import SplashScreen from './SplashScreen';
 
 export default function ParticipantView() {
     const { socket, session, participantJoinSession } = useSocket();
@@ -12,6 +13,7 @@ export default function ParticipantView() {
     const [groupName, setGroupName] = useState('');
     const [joined, setJoined] = useState(false);
     const [joinError, setJoinError] = useState('');
+    const [showSplash, setShowSplash] = useState(true);
 
     const [responses, setResponses] = useState({
         like: '',
@@ -23,6 +25,14 @@ export default function ParticipantView() {
         wish: false,
         wonder: false
     });
+
+    useEffect(() => {
+        // Check if splash screen has been seen
+        const splashSeen = localStorage.getItem('splashScreenSeen');
+        if (splashSeen === 'true') {
+            setShowSplash(false);
+        }
+    }, []);
 
     useEffect(() => {
         // Rehydrate from local storage if available
@@ -41,7 +51,20 @@ export default function ParticipantView() {
             setJoinError(data.message);
             setJoined(false);
         });
-        return () => socket.off('error');
+
+        socket.on('sessionEnded', () => {
+            localStorage.removeItem('explorerSessionCode');
+            localStorage.removeItem('explorerGroupName');
+            setJoined(false);
+            setSessionCode('');
+            setGroupName('');
+            setJoinError('Session ended by facilitator.');
+        });
+
+        return () => {
+            socket.off('error');
+            socket.off('sessionEnded');
+        };
     }, [socket]);
 
     const handleJoin = (e) => {
@@ -54,6 +77,14 @@ export default function ParticipantView() {
             setJoined(true);
             playJoin();
         }
+    };
+
+    const handleLeave = () => {
+        localStorage.removeItem('explorerSessionCode');
+        localStorage.removeItem('explorerGroupName');
+        setJoined(false);
+        setSessionCode('');
+        setGroupName('');
     };
 
     const handlePromptSubmit = (promptId) => {
@@ -107,6 +138,10 @@ export default function ParticipantView() {
         if (!session.activeScenario) return null;
         return SCENARIOS.find(s => s.id === session.activeScenario) || null;
     }, [session.activeScenario]);
+
+    if (showSplash) {
+        return <SplashScreen onEnter={() => setShowSplash(false)} />;
+    }
 
     if (!joined) {
         return (
@@ -178,8 +213,14 @@ export default function ParticipantView() {
                     <ChevronRight className="w-4 h-4 text-[#FFD700]" />
                     <PhaseIndicator active={session.phase === 4} label="Treasury" />
                 </div>
-                <div className="text-[#FFD700] ml-4 pixel-font text-[10px] hidden sm:block">
-                    {groupName}
+                <div className="flex items-center gap-3 ml-4">
+                    <span className="text-[#FFD700] pixel-font text-[10px] hidden sm:block">{groupName}</span>
+                    <button
+                        onClick={handleLeave}
+                        className="bg-red-800/50 text-white px-2 py-1 rounded text-[10px] font-bold hover:bg-red-700 transition-colors flex items-center gap-1"
+                    >
+                        <LogOut className="w-3 h-3" /> Leave
+                    </button>
                 </div>
             </div>
 
